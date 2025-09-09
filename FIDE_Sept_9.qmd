@@ -1,0 +1,115 @@
+---
+title: "FIDESept9"
+format: html
+editor: visual
+---
+
+## FIDE Chess Data
+
+### Import
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load('2025-09-23')
+```
+
+```{r}
+fide_ratings_august <- tuesdata$fide_ratings_august
+fide_ratings_september <- tuesdata$fide_ratings_september
+```
+
+```{r}
+library(tidyverse)
+```
+
+Train of thought- Find the difference in FIDE ratings between Aug / Sept for players and make a scatterplot of how ratings change based on games played.
+
+-   Issues to solve while wrangling:
+
+    -   Unequal number of rows from new players
+
+    -   Duplicate ID's
+
+    -   Inactive players
+
+### Wrangling
+
+```{r}
+# Make sure ID is the correct type
+fide_ratings_august$id <- as.numeric(fide_ratings_august$id)
+fide_ratings_september$id <- as.numeric(fide_ratings_september$id)
+
+```
+
+```{r}
+# Viewing duplicate ID's
+fide_ratings_september |> 
+  count(id, sort = TRUE)
+```
+
+Because of a data quality issue (conflicting player ID's), we need to drop about 40 rows of the data.
+
+```{r}
+# Remove duplicate ID's from each month
+fide_ratings_august <- fide_ratings_august |> 
+  add_count(id) |>   
+  filter(n == 1)
+
+fide_ratings_september <- fide_ratings_september |> 
+  add_count(id) |> 
+  filter(n == 1)
+```
+
+```{r}
+# Ensure data is the same across months
+fide_ratings_september <- fide_ratings_september |> 
+  filter(id %in% fide_ratings_august$id)
+
+fide_ratings_august <- fide_ratings_august |> 
+  filter(id %in% fide_ratings_september$id)
+```
+
+```{r}
+# Order data for ease of calculation
+fide_ratings_september <- fide_ratings_september |> 
+  arrange(id)
+
+fide_ratings_august <- fide_ratings_august |> 
+  arrange(id)
+```
+
+```{r}
+# Verify the data wrangling
+truth <- fide_ratings_august$id == fide_ratings_september$id
+summary(truth) # Good news- data is now the same!
+```
+
+```{r}
+# Last bit of wrangling
+
+# Calculate rating differential and total games played, add to data frame
+rating_diff <- fide_ratings_september$rating - fide_ratings_august$rating
+total_games <- fide_ratings_september$games + fide_ratings_august$games
+
+total_ratings <- data.frame(rating_diff, total_games, fide_ratings_september$rating, fide_ratings_september$name)
+
+total_ratings <- total_ratings |> 
+  filter(total_games > 0) # Removes all that haven't played any games
+```
+
+```{r}
+# Plot Games / Rating Differential
+total_ratings |> 
+  ggplot(aes(x = total_games, y = rating_diff)) +
+  geom_jitter(size = 0.9) +
+  theme_bw() +
+  labs(
+   x = "Number of Games Played",
+   y = "Rating Differential",
+   title = "Increase/Decrease in FIDE Rating by Games Played",
+   subtitle = "International Chess Ratings", 
+   caption = "Source: TidyTuesday"
+  )
+
+ggsave("fide_ranking_changes.png")
+
+```
