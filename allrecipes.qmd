@@ -1,0 +1,81 @@
+---
+title: "AllRecipes"
+format: html
+execute:
+  echo: true
+---
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load('2025-09-16')
+## OR
+tuesdata <- tidytuesdayR::tt_load(2025, week = 37)
+
+all_recipes <- tuesdata$all_recipes
+cuisines <- tuesdata$cuisines
+```
+
+Today we're taking a look at the Allrecipes data for TidyTuesday!
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(ggthemes)
+library(ggrepel)
+```
+
+```{r}
+plot(all_recipes$total_time, all_recipes$avg_rating)
+```
+
+```{r}
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "all_recipes", all_recipes)
+```
+
+```{r}
+result <- dbGetQuery(con, "
+SELECT *
+    FROM all_recipes
+WHERE total_time > 10000
+")
+
+result <- result |> 
+    select(name, total_time, avg_rating) |> 
+    arrange(desc(total_time), )
+
+head(result, n = 15)
+```
+
+
+```{r}
+counts <- cuisines |> 
+    count(country)
+counts |> 
+    arrange(desc(n)) |> 
+    print(n = 100)
+```
+
+
+```{r}
+average_cuisines <- cuisines |> 
+    select(country, avg_rating)
+```
+```{r}
+average_cuisines <- average_cuisines |> 
+    group_by(country) |> 
+    summarise(average_rating = mean(avg_rating, na.rm = TRUE))
+```
+```{r}
+average_cuisines |> 
+    ggplot(aes(x = country, y = average_rating)) +
+    geom_point() +
+    theme_economist() +
+    scale_x_discrete(labels = NULL) +
+    labs(x = "Ratings of Cuisines on AllRecipes",
+    y = "Average Rating",
+    title = "How popular is each country's cuisine?",
+    subtitle = "Average Rating on AllRecipes.com") +
+        geom_label_repel(aes(label = country), vjust = 0.5) +
+        coord_cartesian(clip = "off") +
+        theme(plot.margin = margin(1, 60, 1, 60))
+```
