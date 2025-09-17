@@ -71,11 +71,17 @@ average_cuisines |>
     geom_point() +
     theme_economist() +
     scale_x_discrete(labels = NULL) +
-    labs(x = "Ratings of Cuisines on AllRecipes",
+    labs(x = "Country",
     y = "Average Rating",
     title = "How popular is each country's cuisine?",
     subtitle = "Average Rating on AllRecipes.com") +
         geom_label_repel(aes(label = country), vjust = 0.5) +
         coord_cartesian(clip = "off") +
-        theme(plot.margin = margin(1, 60, 1, 60))
+        theme(plot.margin = margin(1, 60, 1, 60)) +
+        theme(
+            plot.title = element_text(size = 20),
+            plot.subtitle = element_text(size = 14, hjust = 0),
+            axis.title.x = element_text(size = 16),
+            axis.title.y = element_text(size = 16, vjust = 1)
+        )
 ```
